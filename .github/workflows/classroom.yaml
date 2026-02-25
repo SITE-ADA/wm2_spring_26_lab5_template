@@ -74,22 +74,43 @@ jobs:
           https://repo1.maven.org/maven2/org/junit/platform/junit-platform-console-standalone/1.10.0/junit-platform-console-standalone-1.10.0.jar
 
       # Compile student code first
+      # - name: Compile student code
+      #   run: |
+      #     chmod +x ./gradlew
+      #     ./gradlew compileJava compileTestJava
+    
       - name: Compile student code
         run: |
           chmod +x ./gradlew
-          ./gradlew compileJava compileTestJava
+          ./gradlew clean compileJava
+
+      - name: Prepare test output directory
+        run: |
+          mkdir -p build/classes/java/test
 
       - name: Inject hidden test classes
         run: |
-          mkdir -p build/classes/java/test
+          echo "Extracting hidden test classes..."
           jar xf hidden-tests.jar
-          cp -r az build/classes/java/test/ || true
+          cp -r com build/classes/java/test/ || true
+          echo "Injected files:"
+          find build/classes/java/test -type f
+
+
+      # - name: Inject hidden test classes
+      #   run: |
+      #     mkdir -p build/classes/java/test
+      #     jar xf hidden-tests.jar
+      #     cp -r az build/classes/java/test/ || true
+
+      # - name: Run Gradle tests
+      #   run: |
+      #     ./gradlew test --info
 
       - name: Run Gradle tests
         run: |
-          ./gradlew test --info
+          ./gradlew test -x compileTestJava -x processTestResources --info
 
-      
        # Upload only results, never sources
       - name: Upload test results
         if: always()
