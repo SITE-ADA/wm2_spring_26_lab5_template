@@ -1,34 +1,24 @@
 {
     "tests": [
         {
-            "name": "Repository Layer (Hidden)",
-            "setup": "chmod +x ./gradlew",
-            "run": "./gradlew test --tests '*ProductRepositoryImplTest' || true",
-            "input": "",
-            "output": "",
-            "comparison": "included",
-            "timeout": 10,
-            "points": 30
-        },
-        {
             "name": "Service Layer (Hidden)",
             "setup": "",
-            "run": "./gradlew test --tests '*ProductServiceImplTest' || true",
+            "run": "./gradlew test --tests '*EventServiceImplTest' || true",
             "input": "",
             "output": "",
             "comparison": "included",
-            "timeout": 10,
-            "points": 35
+            "timeout": 15,
+            "points": 50
         },
         {
             "name": "Controller Layer (Hidden)",
             "setup": "",
-            "run": "./gradlew test --tests '*ProductControllerTest' || true",
+            "run": "./gradlew test --tests '*EventControllerTest' || true",
             "input": "",
             "output": "",
             "comparison": "included",
-            "timeout": 10,
-            "points": 35
+            "timeout": 15,
+            "points": 50
         }
     ],
     "visibility": "visible",

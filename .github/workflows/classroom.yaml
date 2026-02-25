@@ -42,7 +42,7 @@ jobs:
           # Get the latest release asset
           curl -H "Authorization: token ${{ secrets.TEST_REPO_TOKEN }}" \
                -H "Accept: application/vnd.github.v3+json" \
-               -L https://api.github.com/repos/SITE-ADA/wm2_spring_26_lab4_tests/releases/latest \
+               -L https://api.github.com/repos/SITE-ADA/wm2_spring_26_lab5_tests/releases/latest \
                | grep '"browser_download_url":' | grep 'hidden-tests.jar' | cut -d'"' -f4 | xargs curl -H "Authorization: token ${{ secrets.TEST_REPO_TOKEN }}" -L -o hidden-tests.jar
           
           if [ ! -f hidden-tests.jar ]; then
@@ -68,7 +68,7 @@ jobs:
           # Better: Use a custom test runner or Gradle plugin
           java -cp "hidden-tests.jar:build/classes/java/main:build/classes/java/test:$(./gradlew printTestClasspath -q 2>/dev/null || echo '')" \
                org.junit.platform.console.ConsoleLauncher \
-               --select-package az.edu.ada.wm2.spring.lab4 \
+               --select-package az.edu.ada.wm2.spring.lab5 \
                --reports-dir=build/test-results/test \
                --fail-if-no-tests || TEST_EXIT=$?
           
