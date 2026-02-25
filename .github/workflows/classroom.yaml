@@ -92,7 +92,7 @@ jobs:
         run: |
           echo "Extracting hidden test classes..."
           jar xf hidden-tests.jar
-          cp -r com build/classes/java/test/ || true
+          cp -r az build/classes/java/test/ || true
           echo "Injected files:"
           find build/classes/java/test -type f
 
