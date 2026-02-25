@@ -28,3 +28,8 @@ dependencies {
 tasks.named('test') {
 	useJUnitPlatform()
 }
+
+task hiddenTest(type: Test) {
+    testClassesDirs = files("build/classes/java/test")
+    classpath = files("build/classes/java/test") + sourceSets.main.runtimeClasspath
+}

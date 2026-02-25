@@ -84,17 +84,17 @@ jobs:
           chmod +x ./gradlew
           ./gradlew clean compileJava
 
-      # - name: Prepare test output directory
-      #   run: |
-      #     mkdir -p build/classes/java/test
+      - name: Prepare test output directory
+        run: |
+          mkdir -p build/classes/java/test
 
-      # - name: Inject hidden test classes
-      #   run: |
-      #     echo "Extracting hidden test classes..."
-      #     jar xf hidden-tests.jar
-      #     cp -r com build/classes/java/test/ || true
-      #     echo "Injected files:"
-      #     find build/classes/java/test -type f
+      - name: Inject hidden test classes
+        run: |
+          echo "Extracting hidden test classes..."
+          jar xf hidden-tests.jar
+          cp -r com build/classes/java/test/ || true
+          echo "Injected files:"
+          find build/classes/java/test -type f
 
 
       # - name: Inject hidden test classes
@@ -107,23 +107,10 @@ jobs:
       #   run: |
       #     ./gradlew test --info
 
-      # - name: Run Gradle tests
-      #   run: |
-      #     ./gradlew test -x compileTestJava -x processTestResources --info
-
-      # Inject hidden test sources
-      - name: Inject hidden tests into src/test/java
-        run: |
-          mkdir -p src/test/java
-          jar xf hidden-tests.jar
-          cp -r com src/test/java/ || true
-          echo "Injected test files:"
-          find src/test/java -type f
-
-      # Run Gradle test normally
       - name: Run Gradle tests
         run: |
-          ./gradlew test --info
+          ./gradlew hiddenTest
+        # ./gradlew test -x compileTestJava -x processTestResources --info
 
        # Upload only results, never sources
       - name: Upload test results
