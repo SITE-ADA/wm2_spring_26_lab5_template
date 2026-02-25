@@ -79,56 +79,17 @@ jobs:
           chmod +x ./gradlew
           ./gradlew compileJava compileTestJava
 
-      # Run tests using Gradle TestKit or custom runner
-      # - name: Run tests from JAR
-      #   run: |
-      #     # Create a temporary directory for test execution
-      #     mkdir -p /tmp/test-run
-          
-      #     # Get the classpath from Gradle
-      #     TEST_CP=$(./gradlew dependencies --configuration testRuntimeClasspath 2>/dev/null | grep '^runtimeClasspath' -A 1000 | grep '\\\\' | cut -d' ' -f4 | tr '\n' ':' || echo '')
-          
-      #     # Run tests with JUnit Console Launcher included in classpath
-      #     java -cp "junit-platform-console-standalone-1.10.0.jar:hidden-tests.jar:build/classes/java/main:build/classes/java/test:$TEST_CP" \
-      #         org.junit.platform.console.ConsoleLauncher \
-      #         --scan-classpath \
-      #         --classpath hidden-tests.jar \
-      #         --classpath build/classes/java/main \
-      #         --reports-dir=build/test-results/test \
-      #         --fail-if-no-tests || TEST_EXIT=$?
-          
-      #     echo "Test exit code: ${TEST_EXIT:-0}"
-      #     exit ${TEST_EXIT:-0}
-      # - name: Run tests from JAR
-      #   run: |
-      #     java -jar junit-platform-console-standalone-1.10.0.jar \
-      #       --class-path hidden-tests.jar:build/classes/java/main \
-      #       --scan-class-path \
-      #       --details=tree \
-      #       --reports-dir=build/test-results/test \
-      #       --fail-if-no-tests
-
-      # Extract hidden tests into project
-      - name: Inject hidden tests
+      - name: Inject hidden test classes
         run: |
-          echo "Extracting hidden tests..."
-          
-          mkdir -p tmp-tests
-          cd tmp-tests
-          jar xf ../hidden-tests.jar
-          cd ..
-          
-          mkdir -p src/test/java
-          cp -r tmp-tests/* src/test/java/
-          
-          echo "Injected test files:"
-          find src/test/java -type f
+          mkdir -p build/classes/java/test
+          jar xf hidden-tests.jar
+          cp -r az build/classes/java/test/ || true
 
-      # Run tests with Gradle (NORMAL WAY)
       - name: Run Gradle tests
         run: |
           ./gradlew test --info
 
+      
        # Upload only results, never sources
       - name: Upload test results
         if: always()
