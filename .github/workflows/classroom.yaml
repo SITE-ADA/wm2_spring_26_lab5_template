@@ -51,6 +51,11 @@ jobs:
           fi
           ls -la hidden-tests.jar
 
+      - name: Download JUnit Console Launcher
+        run: |
+          curl -L -o junit-platform-console-standalone-1.10.0.jar \
+          https://repo1.maven.org/maven2/org/junit/platform/junit-platform-console-standalone/1.10.0/junit-platform-console-standalone-1.10.0.jar
+
       # Compile student code first
       - name: Compile student code
         run: |
