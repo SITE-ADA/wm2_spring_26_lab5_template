@@ -102,8 +102,9 @@ jobs:
       - name: Run tests from JAR
         run: |
           java -jar junit-platform-console-standalone-1.10.0.jar \
-            --class-path hidden-tests.jar:build/classes/java/main:build/classes/java/test \
+            --class-path hidden-tests.jar:build/classes/java/main \
             --scan-class-path \
+            --details=tree \
             --reports-dir=build/test-results/test \
             --fail-if-no-tests
 
