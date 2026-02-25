@@ -1,0 +1,87 @@
+name: Hidden Tests
+
+on:
+  push:
+    branches: [main, master]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      checks: write
+
+    steps:
+      # Checkout student code first
+      - uses: actions/checkout@v4
+
+      # Setup Java before running tests
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      # Setup Gradle
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v3
+
+      # CRITICAL: Verify token exists before checkout
+      - name: Verify token
+        run: |
+          if [ -z "${{ secrets.TEST_REPO_TOKEN }}" ]; then
+            echo "ERROR: TEST_REPO_TOKEN secret is not set!"
+            echo "Please add it to Organization secrets: https://github.com/organizations/SITE-ADA/settings/secrets/actions"
+            exit 1
+          fi
+          echo "Token is present"
+
+      # Download pre-compiled test JAR from private repo releases
+      - name: Download test JAR
+        run: |
+          # Get the latest release asset
+          curl -H "Authorization: token ${{ secrets.TEST_REPO_TOKEN }}" \
+               -H "Accept: application/vnd.github.v3+json" \
+               -L https://api.github.com/repos/SITE-ADA/wm2_spring_26_lab4_tests/releases/latest \
+               | grep '"browser_download_url":' | grep 'hidden-tests.jar' | cut -d'"' -f4 | xargs curl -H "Authorization: token ${{ secrets.TEST_REPO_TOKEN }}" -L -o hidden-tests.jar
+          
+          if [ ! -f hidden-tests.jar ]; then
+            echo "ERROR: Failed to download hidden-tests.jar"
+            exit 1
+          fi
+          ls -la hidden-tests.jar
+
+      # Compile student code first
+      - name: Compile student code
+        run: |
+          chmod +x ./gradlew
+          ./gradlew compileJava compileTestJava
+
+      # Run tests using Gradle TestKit or custom runner
+      # Option A: Use Gradle to run tests from JAR (requires special setup)
+      - name: Run tests from JAR
+        run: |
+          # Create a temporary directory for test execution
+          mkdir -p /tmp/test-run
+          
+          # Extract and run tests (this is a simplified approach)
+          # Better: Use a custom test runner or Gradle plugin
+          java -cp "hidden-tests.jar:build/classes/java/main:build/classes/java/test:$(./gradlew printTestClasspath -q 2>/dev/null || echo '')" \
+               org.junit.platform.console.ConsoleLauncher \
+               --select-package az.edu.ada.wm2.spring.lab4 \
+               --reports-dir=build/test-results/test \
+               --fail-if-no-tests || TEST_EXIT=$?
+          
+          echo "Test exit code: ${TEST_EXIT:-0}"
+          exit ${TEST_EXIT:-0}
+
+       # Upload only results, never sources
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results
+          path: |
+            build/test-results/test/
+            !build/**/java/
+          if-no-files-found: warn
