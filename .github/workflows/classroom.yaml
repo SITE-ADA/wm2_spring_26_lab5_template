@@ -9,54 +9,50 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: read
-      checks: write
 
     steps:
-      # Checkout student code first
+      # 1️⃣ Checkout student repository
       - uses: actions/checkout@v4
 
-      # Setup Java before running tests
+      # 2️⃣ Setup Java
       - name: Set up Java
         uses: actions/setup-java@v4
         with:
-          distribution: 'temurin'
-          java-version: '17'
+          distribution: temurin
+          java-version: 17
 
-      # Setup Gradle
-      - name: Setup Gradle
-        uses: gradle/actions/setup-gradle@v3
+      # 3️⃣ Install jq (required for GitHub API parsing)
+      - name: Install jq
+        run: sudo apt-get update && sudo apt-get install -y jq
 
-      # CRITICAL: Verify token exists before checkout
+      # 4️⃣ Verify secret exists
       - name: Verify token
         run: |
           if [ -z "${{ secrets.TEST_REPO_TOKEN }}" ]; then
             echo "ERROR: TEST_REPO_TOKEN secret is not set!"
-            echo "Please add it to Organization secrets: https://github.com/organizations/SITE-ADA/settings/secrets/actions"
             exit 1
           fi
           echo "Token is present"
 
-      # Download pre-compiled test JAR from private repo releases
+      # 5️⃣ Download hidden-tests.jar from private repo release
       - name: Download test JAR
         run: |
           TOKEN="${{ secrets.TEST_REPO_TOKEN }}"
-
-          echo "Fetching latest release info..."
 
           RELEASE_JSON=$(curl -s \
             -H "Authorization: Bearer $TOKEN" \
             -H "Accept: application/vnd.github+json" \
             https://api.github.com/repos/SITE-ADA/wm2_spring_26_lab5_tests/releases/latest)
 
-          ASSET_ID=$(echo "$RELEASE_JSON" | jq '.assets[] | select(.name=="hidden-tests.jar") | .id')
+          ASSET_ID=$(echo "$RELEASE_JSON" | jq -r '.assets[] | select(.name=="hidden-tests.jar") | .id')
 
-          if [ -z "$ASSET_ID" ]; then
+          if [ -z "$ASSET_ID" ] || [ "$ASSET_ID" = "null" ]; then
             echo "ERROR: hidden-tests.jar not found in latest release"
             echo "$RELEASE_JSON"
             exit 1
           fi
 
-          echo "Downloading asset ID: $ASSET_ID"
+          echo "Downloading hidden-tests.jar (asset id: $ASSET_ID)"
 
           curl -L \
             -H "Authorization: Bearer $TOKEN" \
@@ -65,56 +61,36 @@ jobs:
             -o hidden-tests.jar \
             --fail
 
-          echo "Download complete"
+          echo "Download successful"
           ls -la hidden-tests.jar
-     
-      - name: Download JUnit Console Launcher
+
+      # 6️⃣ Download JUnit Console Standalone
+      - name: Download JUnit Console
         run: |
-          curl -L -o junit-platform-console-standalone-1.10.0.jar \
+          curl -L -o junit-platform-console-standalone.jar \
           https://repo1.maven.org/maven2/org/junit/platform/junit-platform-console-standalone/1.10.0/junit-platform-console-standalone-1.10.0.jar
 
-      # Compile student code first
+      # 7️⃣ Compile student source only (NOT tests)
       - name: Compile student code
         run: |
           chmod +x ./gradlew
-          ./gradlew compileJava compileTestJava
+          ./gradlew clean compileJava
 
-      # Run tests using Gradle TestKit or custom runner
-      # - name: Run tests from JAR
-      #   run: |
-      #     # Create a temporary directory for test execution
-      #     mkdir -p /tmp/test-run
-          
-      #     # Get the classpath from Gradle
-      #     TEST_CP=$(./gradlew dependencies --configuration testRuntimeClasspath 2>/dev/null | grep '^runtimeClasspath' -A 1000 | grep '\\\\' | cut -d' ' -f4 | tr '\n' ':' || echo '')
-          
-      #     # Run tests with JUnit Console Launcher included in classpath
-      #     java -cp "junit-platform-console-standalone-1.10.0.jar:hidden-tests.jar:build/classes/java/main:build/classes/java/test:$TEST_CP" \
-      #         org.junit.platform.console.ConsoleLauncher \
-      #         --scan-classpath \
-      #         --classpath hidden-tests.jar \
-      #         --classpath build/classes/java/main \
-      #         --reports-dir=build/test-results/test \
-      #         --fail-if-no-tests || TEST_EXIT=$?
-          
-      #     echo "Test exit code: ${TEST_EXIT:-0}"
-      #     exit ${TEST_EXIT:-0}
-      - name: Run tests from JAR
+      # 8️⃣ Run hidden tests
+      - name: Run hidden tests
         run: |
-          java -jar junit-platform-console-standalone-1.10.0.jar \
+          java -jar junit-platform-console-standalone.jar \
             --class-path hidden-tests.jar:build/classes/java/main \
             --scan-class-path \
             --details=tree \
             --reports-dir=build/test-results/test \
             --fail-if-no-tests
 
-       # Upload only results, never sources
+      # 9️⃣ Upload test results
       - name: Upload test results
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: test-results
-          path: |
-            build/test-results/test/
-            !build/**/java/
+          path: build/test-results/test/
           if-no-files-found: warn
