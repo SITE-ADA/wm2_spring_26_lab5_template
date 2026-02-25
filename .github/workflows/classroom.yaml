@@ -39,17 +39,45 @@ jobs:
       # Download pre-compiled test JAR from private repo releases
       - name: Download test JAR
         run: |
-          # Get the latest release asset
-          curl -H "Authorization: token ${{ secrets.TEST_REPO_TOKEN }}" \
-               -H "Accept: application/vnd.github.v3+json" \
-               -L https://api.github.com/repos/SITE-ADA/wm2_spring_26_lab5_tests/releases/latest \
-               | grep '"browser_download_url":' | grep 'hidden-tests.jar' | cut -d'"' -f4 | xargs curl -H "Authorization: token ${{ secrets.TEST_REPO_TOKEN }}" -L -o hidden-tests.jar
+          # Get release info first
+          RELEASE_JSON=$(curl -s -H "Authorization: token ${{ secrets.TEST_REPO_TOKEN }}" \
+            -H "Accept: application/vnd.github.v3+json" \
+            https://api.github.com/repos/SITE-ADA/wm2_spring_26_lab5_tests/releases/latest)
           
-          if [ ! -f hidden-tests.jar ]; then
-            echo "ERROR: Failed to download hidden-tests.jar"
+          # Extract download URL properly
+          DOWNLOAD_URL=$(echo "$RELEASE_JSON" | grep -o '"browser_download_url": "[^"]*hidden-tests.jar"' | head -1 | cut -d'"' -f4)
+          
+          if [ -z "$DOWNLOAD_URL" ]; then
+            echo "ERROR: Could not find hidden-tests.jar in latest release"
+            echo "Release info: $RELEASE_JSON"
             exit 1
           fi
+          
+          echo "Downloading from: $DOWNLOAD_URL"
+          
+          # Download with proper error handling
+          curl -H "Authorization: token ${{ secrets.TEST_REPO_TOKEN }}" \
+              -L "$DOWNLOAD_URL" \
+              -o hidden-tests.jar \
+              --fail \
+              --max-time 60
+          
+          # Verify JAR is valid
+          if [ ! -f hidden-tests.jar ] || [ ! -s hidden-tests.jar ]; then
+            echo "ERROR: Download failed or file is empty"
+            exit 1
+          fi
+          
+          # Verify JAR integrity
+          if ! jar tf hidden-tests.jar > /dev/null 2>&1; then
+            echo "ERROR: JAR file is corrupted!"
+            ls -la hidden-tests.jar
+            exit 1
+          fi
+          
+          echo "JAR downloaded and verified successfully:"
           ls -la hidden-tests.jar
+          jar tf hidden-tests.jar | head -20
 
       - name: Download JUnit Console Launcher
         run: |
