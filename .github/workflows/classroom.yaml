@@ -63,19 +63,22 @@ jobs:
           ./gradlew compileJava compileTestJava
 
       # Run tests using Gradle TestKit or custom runner
-      # Option A: Use Gradle to run tests from JAR (requires special setup)
       - name: Run tests from JAR
         run: |
           # Create a temporary directory for test execution
           mkdir -p /tmp/test-run
           
-          # Extract and run tests (this is a simplified approach)
-          # Better: Use a custom test runner or Gradle plugin
-          java -cp "hidden-tests.jar:build/classes/java/main:build/classes/java/test:$(./gradlew printTestClasspath -q 2>/dev/null || echo '')" \
-               org.junit.platform.console.ConsoleLauncher \
-               --select-package az.edu.ada.wm2.spring.lab5 \
-               --reports-dir=build/test-results/test \
-               --fail-if-no-tests || TEST_EXIT=$?
+          # Get the classpath from Gradle
+          TEST_CP=$(./gradlew dependencies --configuration testRuntimeClasspath 2>/dev/null | grep '^runtimeClasspath' -A 1000 | grep '\\\\' | cut -d' ' -f4 | tr '\n' ':' || echo '')
+          
+          # Run tests with JUnit Console Launcher included in classpath
+          java -cp "junit-platform-console-standalone-1.10.0.jar:hidden-tests.jar:build/classes/java/main:build/classes/java/test:$TEST_CP" \
+              org.junit.platform.console.ConsoleLauncher \
+              --scan-classpath \
+              --classpath hidden-tests.jar \
+              --classpath build/classes/java/main \
+              --reports-dir=build/test-results/test \
+              --fail-if-no-tests || TEST_EXIT=$?
           
           echo "Test exit code: ${TEST_EXIT:-0}"
           exit ${TEST_EXIT:-0}
