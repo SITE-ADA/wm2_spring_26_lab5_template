@@ -29,8 +29,8 @@ jobs:
       # CRITICAL: Verify token exists before checkout
       - name: Verify token
         run: |
-          if [ -z "${{ secrets.TEST_REPO_TOKEN }}" ]; then
-            echo "ERROR: TEST_REPO_TOKEN secret is not set!"
+          if [ -z "${{ secrets.GITHUB_TOKEN }}" ]; then
+            echo "ERROR: GITHUB_TOKEN secret is not set!"
             echo "Please add it to Organization secrets: https://github.com/organizations/SITE-ADA/settings/secrets/actions"
             exit 1
           fi
@@ -43,7 +43,7 @@ jobs:
       #  continue-on-error: true
       #  with:
       #    repository: nsadili/wm2_spring_26_lab5_tests
-      #    token: ${{ secrets.TEST_REPO_TOKEN }}
+      #    token: ${{ secrets.GITHUB_TOKEN }}
       #    path: hidden-tests
       #    ref: main  # Explicitly specify default branch
 
@@ -53,7 +53,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           repository: SITE-ADA/wm2_spring_26_lab5_tests
-          token: ${{ secrets.TEST_REPO_TOKEN }}
+          token: ${{ secrets.GITHUB_TOKEN }}
           path: hidden-tests
           ref: main
 
