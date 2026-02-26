@@ -4,6 +4,9 @@ import az.edu.ada.wm2.lab5.model.Event;
 
 import java.util.*;
 
+import org.springframework.stereotype.Repository;
+
+@Repository
 public class EventRepositoryImpl implements EventRepository {
     private final Map<UUID, Event> eventStore = new HashMap<>();
 
