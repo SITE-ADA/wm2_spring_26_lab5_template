@@ -1,0 +1,124 @@
+name: Hidden Tests
+
+on:
+  push:
+    branches: [main, master]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      checks: write
+
+    steps:
+      # Checkout student code first
+      - uses: actions/checkout@v4
+
+      # Setup Java before running tests
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      # Setup Gradle
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v3
+
+      # CRITICAL: Verify token exists before checkout
+      - name: Verify token
+        run: |
+          if [ -z "${{ secrets.TEST_REPO_TOKEN }}" ]; then
+            echo "ERROR: TEST_REPO_TOKEN secret is not set!"
+            echo "Please add it to Organization secrets: https://github.com/organizations/SITE-ADA/settings/secrets/actions"
+            exit 1
+          fi
+          echo "Token is present"
+
+      # Download pre-compiled test JAR from private repo releases
+      - name: Download test JAR
+        run: |
+          TOKEN="${{ secrets.TEST_REPO_TOKEN }}"
+
+          echo "Fetching latest release info..."
+
+          RELEASE_JSON=$(curl -s \
+            -H "Authorization: Bearer $TOKEN" \
+            -H "Accept: application/vnd.github+json" \
+            https://api.github.com/repos/SITE-ADA/wm2_spring_26_lab5_tests/releases/latest)
+
+          ASSET_ID=$(echo "$RELEASE_JSON" | jq '.assets[] | select(.name=="hidden-tests.jar") | .id')
+
+          if [ -z "$ASSET_ID" ]; then
+            echo "ERROR: hidden-tests.jar not found in latest release"
+            echo "$RELEASE_JSON"
+            exit 1
+          fi
+
+          echo "Downloading asset ID: $ASSET_ID"
+
+          curl -L \
+            -H "Authorization: Bearer $TOKEN" \
+            -H "Accept: application/octet-stream" \
+            https://api.github.com/repos/SITE-ADA/wm2_spring_26_lab5_tests/releases/assets/$ASSET_ID \
+            -o hidden-tests.jar \
+            --fail
+
+          echo "Download complete"
+          ls -la hidden-tests.jar
+     
+      - name: Download JUnit Console Launcher
+        run: |
+          curl -L -o junit-platform-console-standalone-1.10.0.jar \
+          https://repo1.maven.org/maven2/org/junit/platform/junit-platform-console-standalone/1.10.0/junit-platform-console-standalone-1.10.0.jar
+
+      # Compile student code first
+      # - name: Compile student code
+      #   run: |
+      #     chmod +x ./gradlew
+      #     ./gradlew compileJava compileTestJava
+    
+      - name: Compile student code
+        run: |
+          chmod +x ./gradlew
+          ./gradlew clean compileJava
+
+      - name: Prepare test output directory
+        run: |
+          mkdir -p build/classes/java/test
+
+      - name: Inject hidden test classes
+        run: |
+          echo "Extracting hidden test classes..."
+          jar xf hidden-tests.jar
+          cp -r az build/classes/java/test/ || true
+          echo "Injected files:"
+          find build/classes/java/test -type f
+
+
+      # - name: Inject hidden test classes
+      #   run: |
+      #     mkdir -p build/classes/java/test
+      #     jar xf hidden-tests.jar
+      #     cp -r az build/classes/java/test/ || true
+
+      # - name: Run Gradle tests
+      #   run: |
+      #     ./gradlew test --info
+
+      - name: Run Gradle tests
+        run: |
+          ./gradlew hiddenTest
+        # ./gradlew test -x compileTestJava -x processTestResources --info
+
+       # Upload only results, never sources
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results
+          path: |
+            build/test-results/test/
+            !build/**/java/
+          if-no-files-found: warn
